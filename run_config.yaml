@@ -1,0 +1,44 @@
+# run_config.yaml
+
+model:
+  model_name: "klue/roberta-base"
+  pii_state_dir: "Checkpoints/250924_01_01_best_model.pt"  # 개인정보 모델 가중치 경로
+  confid_state_dir: "기밀정보_가중치_경로"  # 기밀정보 모델 가중치 경로
+
+exp:
+  is_pii: True  # 개인정보모델 학습이면 True, 기밀정보모델 학습이면 False
+  name: "250924_01"  # "실험일자(YYMMDD)_실험순번(SS)" 
+  batch_size: 32
+  num_epochs: 1
+  learning_rate: 1e-5
+  device: "cuda:0"  # "cpu" or "cuda:0" or "cuda:1"
+  sampling_ratio: 1.0 # 데이터 불균형 처리 비율
+  k_fold: 3
+  generation_num: 5 # [test] 문맥 문장 데이터 생성 시 생성할 샘플의 수
+
+data:
+  train_data_dir: "Data/set1"  # 학습데이터가 들어있는 directory
+  test_data_dir: "Data/set2"  # 검증데이터가 들어있는 directory
+
+label_mapping:
+  pii_label_2_id:
+    일반정보: 0
+    준식별자: 1
+    개인정보: 2
+  pii_id_2_label:
+    0: "일반정보"
+    1: "준식별자"
+    2: "개인정보"
+  confid_label_2_id:
+    일반정보 : 0
+    기밀정보 : 1
+  confid_id_2_label:
+    0: "일반정보"
+    1: "기밀정보"
+
+db:
+  host: "127.0.0.1"
+  port: "55432"
+  dbname: "postgres"
+  user: "student1"
+  password: "onestone"
