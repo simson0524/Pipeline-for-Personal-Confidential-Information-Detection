@@ -11,6 +11,7 @@ from model_validation.model_validation_process_5 import model_validation_process
 from generated_augmentation.generated_augmentation_process_6 import generated_augmentation_process_6
 from labeling_tools.metric_viewer import metric_viewer
 from database.db_logics import *
+from database.export_dbs import *
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 from torch.utils.data import Subset, DataLoader
 from sklearn.model_selection import StratifiedKFold
@@ -207,7 +208,7 @@ while True:
     model_train_end_time = datetime.now()
     model_train_duration = model_train_end_time - model_train_start_time
 
-
+    find_specific_experiment_name_all_logs(conn, conn, table_name='model_train_sent_dataset_log', experiment_name=experiment_name)
 
     ### ------------------------------------------------------------
     ### 3. 사전 매칭 검증
@@ -278,6 +279,8 @@ while True:
 
     print(f"\n[Metric] 3. 사전매칭검증\n{dictionary_matching_result['metric']}\nRow : label | Column : 정탐/오탐/미탐 순서\n")
 
+    find_specific_experiment_name_all_logs(conn, conn, table_name='dictionary_matching_sent_dataset_log', experiment_name=experiment_name)
+
 
 
     ### ------------------------------------------------------------
@@ -332,6 +335,8 @@ while True:
 
     print(f"\n[Metric] 4. 사전매칭검증\n{ner_regex_matching_result['metric']}\nRow : label | Column : 정탐/오탐/미탐 순서\n")
     
+    find_specific_experiment_name_all_logs(conn, conn, table_name='ner_regex_matching_sent_dataset_log', experiment_name=experiment_name)
+
 
 
     ### ------------------------------------------------------------
@@ -392,6 +397,9 @@ while True:
 
     model_validation_end_time = datetime.now()
     model_validation_duration = model_validation_end_time - model_validation_start_time
+
+    find_specific_experiment_name_all_logs(conn, conn, table_name='model_validation_sent_dataset_log', experiment_name=experiment_name)
+
 
     ### ------------------------------------------------------------
     ### 사전등재리스트 운용

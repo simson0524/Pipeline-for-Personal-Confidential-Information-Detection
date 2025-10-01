@@ -3,93 +3,13 @@
 from database.db_logics import *
 
 
-def find_specific_experiment_name_all_logs(conn, experiment_name):
+def find_specific_experiment_name_all_logs(conn, table_name, experiment_name):
     # 아래는 모두 각 테이블의 experiment_name 컬럼의 값이 "experiment_name"인 로그들입니다. 
     
     # 실험의 총 개요 결과
-    experiment = select_specific_row(
+    select_specific_row(
         conn=conn, 
-        table_name='experiment', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-
-    # 2. 모델학습검증
-    model_train_performance = select_specific_row(
-        conn=conn, 
-        table_name='model_train_performance', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    model_train_sent_dataset_log = select_specific_row(
-        conn=conn, 
-        table_name='model_train_sent_dataset_log', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    
-    # 3. 사전매칭검증
-    dictionary_matching_performance = select_specific_row(
-        conn=conn, 
-        table_name='dictionary_matching_performance', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    dictionary_matching_sent_dataset_log = select_specific_row(
-        conn=conn, 
-        table_name='dictionary_matching_sent_dataset_log', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-
-    # 4. NER/REGEX매칭검증
-    ner_regex_matching_performance = select_specific_row(
-        conn=conn, 
-        table_name='ner_regex_matching_performance', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    ner_regex_matching_sent_dataset_log = select_specific_row(
-        conn=conn, 
-        table_name='ner_regex_matching_sent_dataset_log', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    
-    # 5. 모델검증
-    model_validation_performance = select_specific_row(
-        conn=conn, 
-        table_name='model_validation_performance', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    model_validation_sent_dataset_log = select_specific_row(
-        conn=conn, 
-        table_name='model_validation_sent_dataset_log', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    
-    # 6. 모델학습검증
-    generation_augmented_performance = select_specific_row(
-        conn=conn, 
-        table_name='generation_augmented_performance', 
-        select_column_name="experiment_name", 
-        select_value=experiment_name,
-        experiment_name=experiment_name
-        )
-    generation_augmented_sent_dataset_log = select_specific_row(
-        conn=conn, 
-        table_name='generation_augmented_sent_dataset_log', 
+        table_name=table_name, 
         select_column_name="experiment_name", 
         select_value=experiment_name,
         experiment_name=experiment_name
