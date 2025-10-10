@@ -86,7 +86,7 @@ class PipelineDataset(Dataset):
             # 1. annotations에 있는 친구들 기준으로 우선 추출
             span_tokens = []
             for annotations_dict in self.annotations[id]:
-                span_tokens.append( (annotations_dict['span_token'], annotations_dict['label']) )
+                span_tokens.append( (annotations_dict['span_text'], annotations_dict['label']) ) # 아직 원본 테이터는 span_token으로 변경 안됨
             
 
             # 1-1. annotations에서 추출한 친구들을 인스턴스 추출

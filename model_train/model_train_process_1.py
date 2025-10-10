@@ -20,8 +20,8 @@ def model_train_process_1(model, epoch, dataloader, optimizer, device, loss_fn=N
 
     model.train()
     total_loss = 0
-    if not loss_fn:
-        loss_fn = torch.nn.CrossEntropyLoss()
+    # if not loss_fn:
+    #     loss_fn = torch.nn.CrossEntropyLoss() -> 현재 model안에서 직접 loss를 계산해서 내줌
 
     for batch in tqdm(dataloader, total=len(dataloader), desc=f"1. 모델학습(epoch{epoch}) 프로세스"):
         input_ids = batch["input_ids"].to(device)
@@ -33,9 +33,10 @@ def model_train_process_1(model, epoch, dataloader, optimizer, device, loss_fn=N
         outputs = model(input_ids=input_ids,
                         attention_mask=attention_mask,
                         token_start=token_start,
-                        token_end=token_end)
+                        token_end=token_end,
+                        labels=labels)
         
-        loss = loss_fn(outputs["logits"], labels) # Logits : [0.87, 0.13] -> [1, 0]  /  GT : [0, 1]
+        loss = outputs['loss'] # Logits : [0.87, 0.13] -> [1, 0]  /  GT : [0, 1]
 
         optimizer.zero_grad()
         loss.backward()

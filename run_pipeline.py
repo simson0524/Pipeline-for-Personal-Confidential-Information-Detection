@@ -19,6 +19,7 @@ from datetime import datetime
 import numpy as np
 import torch
 import yaml
+import json
 
 
 # 실험 Config
@@ -56,7 +57,7 @@ while True:
     is_pii        = config['exp']['is_pii']
     batch_size    = config['exp']['batch_size']
     num_epochs    = config['exp']['num_epochs']
-    learning_rate = config['exp']['learning_rate']
+    learning_rate = float(config['exp']['learning_rate'])
     device        = config['exp']['device']
     data_dir      = config['data']['train_data_dir']
     if is_pii:
@@ -69,6 +70,11 @@ while True:
     # 실험시작시각(KST)
     experiment_start_time = datetime.now()
 
+    # "experiment"에 해당 실험에 대한 정보 추가(duration 및 추가 정보는 Loop 종료 후 수정)
+    experiment_log_scheme = (
+        experiment_name,
+        
+    )
 
 
     ### ------------------------------------------------------------
@@ -93,7 +99,7 @@ while True:
     # K-Fold 준비
     labels = [instance['label'] for instance in all_dataset.instances]
     k_fold = config['exp']['k_fold']
-    skf = StratifiedKFold(n_split=k_fold, shuffle=True, random_state=42)
+    skf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=42)
     kfold_splits = list(skf.split(np.zeros(len(all_dataset)), labels)) # Fold 조합별로 어떤 Idx가 학습/검증인지 저장
 
 
@@ -110,7 +116,7 @@ while True:
     best_performed_epoch_per_fold = {}
 
     for fold in range(k_fold):
-        print(f"\n===== Fold {fold+1}/{k_fold} 학습 시작 =====")
+        print(f"\n#####[Fold {fold+1}/{k_fold} 학습 시작]#####")
 
         train_indices, valid_indices = kfold_splits[fold]
 
@@ -129,9 +135,9 @@ while True:
         print(f"=====[Train CONFIG INFO]====\nBatch_size : {batch_size}({type(batch_size)})\nNum_epochs : {num_epochs}({type(num_epochs)})\nLearning_rate : {learning_rate}({type(learning_rate)})\nMax_length : {max_length}({type(max_length)})\nDevice : {device}({type(device)})\n")
 
         if is_pii:
-            classifier = Classifier(model=model, num_labels=3).to(device)
+            classifier = Classifier(pretrained_bert=model, num_labels=3).to(device)
         else:
-            classifier = Classifier(model=model, num_labels=2).to(device)
+            classifier = Classifier(pretrained_bert=model, num_labels=2).to(device)
 
         optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
@@ -195,7 +201,7 @@ while True:
                 model_train_validation_result['precision'],
                 model_train_validation_result['recall'],
                 model_train_validation_result['f1'],
-                model_train_validation_result['metric']
+                json.dumps(model_train_validation_result['metric'])
             )
             model_train_performance_log.append( model_train_performance_log_scheme )
 
@@ -208,7 +214,7 @@ while True:
     model_train_end_time = datetime.now()
     model_train_duration = model_train_end_time - model_train_start_time
 
-    find_specific_experiment_name_all_logs(conn, conn, table_name='model_train_sent_dataset_log', experiment_name=experiment_name)
+    find_specific_experiment_name_all_logs(conn, table_name='model_train_sent_dataset_log', experiment_name=experiment_name)
 
     ### ------------------------------------------------------------
     ### 3. 사전 매칭 검증
@@ -279,7 +285,7 @@ while True:
 
     print(f"\n[Metric] 3. 사전매칭검증\n{dictionary_matching_result['metric']}\nRow : label | Column : 정탐/오탐/미탐 순서\n")
 
-    find_specific_experiment_name_all_logs(conn, conn, table_name='dictionary_matching_sent_dataset_log', experiment_name=experiment_name)
+    find_specific_experiment_name_all_logs(conn, table_name='dictionary_matching_sent_dataset_log', experiment_name=experiment_name)
 
 
 
@@ -323,7 +329,7 @@ while True:
         wrong_delta_rate_4           = None
         mismatch_delta_rate_4        = None
 
-    # 정탐인 것 이후 프로세스에서 보지 않도록 is_valided True로 만들기
+    # 정탐인 것 이후 프로세스에서 보지 않도록 is_valided=True로 만들기
     for _, _, _, _, idx, _, _, _, _ in ner_regex_matching_result['hit']:
         all_dataset.edit_is_validated(
             idx=idx,
@@ -333,9 +339,9 @@ while True:
     ner_regex_matching_end_time = datetime.now()
     ner_regex_matching_duration = ner_regex_matching_end_time - ner_regex_matching_start_time
 
-    print(f"\n[Metric] 4. 사전매칭검증\n{ner_regex_matching_result['metric']}\nRow : label | Column : 정탐/오탐/미탐 순서\n")
+    print(f"\n[Metric] 4. NER/REGEX매칭검증\n{ner_regex_matching_result['metric']}\nRow : label | Column : 정탐/오탐/미탐 순서\n")
     
-    find_specific_experiment_name_all_logs(conn, conn, table_name='ner_regex_matching_sent_dataset_log', experiment_name=experiment_name)
+    find_specific_experiment_name_all_logs(conn, table_name='ner_regex_matching_sent_dataset_log', experiment_name=experiment_name)
 
 
 
@@ -371,9 +377,9 @@ while True:
         valid_dataloader = DataLoader(valid_subset, batch_size=batch_size, shuffle=False)
 
         if is_pii:
-            classifier = Classifier(model=model, num_labels=3).to(device)
+            classifier = Classifier(pretrained_bert=model, num_labels=3).to(device)
         else:
-            classifier = Classifier(model=model, num_labels=2).to(device)
+            classifier = Classifier(pretrained_bert=model, num_labels=2).to(device)
 
         model_path = f"checkpoints/experiment_{experiment_name}/fold{fold}_{best_performed_epoch_per_fold[f'fold{fold}']}_model.pt"
 
@@ -398,7 +404,7 @@ while True:
     model_validation_end_time = datetime.now()
     model_validation_duration = model_validation_end_time - model_validation_start_time
 
-    find_specific_experiment_name_all_logs(conn, conn, table_name='model_validation_sent_dataset_log', experiment_name=experiment_name)
+    find_specific_experiment_name_all_logs(conn, table_name='model_validation_sent_dataset_log', experiment_name=experiment_name)
 
 
     ### ------------------------------------------------------------
@@ -460,7 +466,7 @@ while True:
         mismatch_delta_rate_3,
         dictionary_matching_result['fetched_dictionary_size'],
         after_process_dictionary_size / dictionary_matching_result['fetched_dictionary_size'],
-        dictionary_matching_result['metric']
+        json.dumps(dictionary_matching_result['metric'])
     )]
     insert_many_rows(conn=conn, table_name='dictionary_matching_performance', data_list=dictionary_matching_performance_log)
     print("dictionary_matching_performance 테이블 업데이트 완료")
@@ -476,7 +482,7 @@ while True:
         wrong_delta_rate_4,
         len(ner_regex_matching_result['mismatch']),
         mismatch_delta_rate_4,
-        ner_regex_matching_result['metric']
+        json.dumps(ner_regex_matching_result['metric'])
     )]
     insert_many_rows(conn=conn, table_name='ner_regex_matching_performance', data_list=ner_regex_matching_performance_log)
     print("ner_regex_matching_performance 테이블 업데이트 완료")
@@ -491,7 +497,7 @@ while True:
         model_validation_result['precision'],
         model_validation_result['recall'],
         model_validation_result['f1'],
-        model_validation_result['metric']
+        json.dumps(model_validation_result['metric'])
     )]
     insert_many_rows(conn=conn, table_name='model_validation_performance', data_list=model_validation_performance_log)
     print("model_validation_performance 테이블 업데이트 완료")

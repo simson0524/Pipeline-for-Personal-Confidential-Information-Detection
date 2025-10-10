@@ -47,8 +47,8 @@ def ner_regex_matching_process_4(conn, experiment_name, dataloader, label_2_id, 
                     curr_sentence,
                     curr_span_token,
                     curr_dataset_idx,
-                    id_2_label(curr_gt_label_id),
-                    id_2_label(curr_pred_label_id),
+                    id_2_label[curr_gt_label_id],
+                    id_2_label[curr_pred_label_id],
                     curr_file_name,
                     curr_sent_seq
                 )

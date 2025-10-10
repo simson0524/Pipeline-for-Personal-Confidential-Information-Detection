@@ -21,7 +21,7 @@ def model_train_validation_process_2(conn, experiment_name, model, epoch, datalo
     model_train_sent_dataset_log = []
 
     with torch.no_grad():        
-        for batch in tqdm(dataloader, total=len(dataloader), desc='2. 모델학습검증 프로세스'):
+        for batch in tqdm(dataloader, total=len(dataloader), desc=f'2. 모델학습검증(epoch{epoch}) 프로세스'):
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
             token_start = batch["token_start"].to(device)
@@ -31,9 +31,10 @@ def model_train_validation_process_2(conn, experiment_name, model, epoch, datalo
             outputs = model(input_ids=input_ids,
                             attention_mask=attention_mask,
                             token_start=token_start,
-                            token_end=token_end)
+                            token_end=token_end,
+                            labels=labels)
             
-            loss = loss_fn(outputs["logits"], labels)
+            loss = outputs['loss']
             total_loss += loss.item()
 
             pred_labels = torch.argmax(outputs['logits'], dim=-1)
@@ -50,8 +51,8 @@ def model_train_validation_process_2(conn, experiment_name, model, epoch, datalo
                     batch['sentence'][i],
                     batch['span_token'][i],
                     batch['idx'][i].item(),
-                    id_2_label(labels[i].item()),
-                    id_2_label(pred_labels[i].item()),
+                    id_2_label[labels[i].item()],
+                    id_2_label[pred_labels[i].item()],
                     batch['file_name'][i],
                     batch['sentence_seq'][i]
                 )

@@ -16,28 +16,28 @@ def get_connection(config):
 def create_nessesary_tables(conn):
     cursor = conn.cursor()
 
-    # [train_set_domain]
-    # 데이터셋( Train Set_{D} )
-    cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS train_set_domain (
-            sentence           TEXT,
-            sentence_id        TEXT,
-            source_file_name   TEXT,
-            sentence_sequence  TEXT,
-            char_start_index   TEXT,
-            char_end_index     TEXT,
-            ground_truth       TEXT,
-            span_token         TEXT,
-            domain             TEXT
-        );
-    """)
+    # # [train_set_domain]
+    # # 데이터셋( Train Set_{D} )
+    # cursor.execute(f"""
+    #     CREATE TABLE IF NOT EXISTS train_set_domain (
+    #         sentence           TEXT,
+    #         sentence_id        TEXT,
+    #         source_file_name   TEXT,
+    #         sentence_sequence  TEXT,
+    #         char_start_index   TEXT,
+    #         char_end_index     TEXT,
+    #         ground_truth       TEXT,
+    #         span_token         TEXT,
+    #         domain             TEXT
+    #     );
+    # """)
 
     # [personal/confidential_info_dictionary]
     # 개인/기밀정보 사전 스키마
     for table in ['personal_info_dictionary', 'confidential_info_dictionary']:
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {table} (
-                span_token            TEXT PRIMARY KEY
+                span_token            TEXT PRIMARY KEY,
                 first_insertion_loop  TEXT,
                 insertion_counts      INTEGER DEFAULT 0,
                 deletion_counts       INTEGER DEFAULT 0
@@ -50,6 +50,11 @@ def create_nessesary_tables(conn):
         CREATE TABLE IF NOT EXISTS experiment (
             experiment_name                 TEXT PRIMARY KEY,
             previous_experiment_name        TEXT,
+            is_pii                          TEXT,
+            batch_size                      TEXT,
+            num_epochs                      TEXT,
+            learning_rate                   TEXT,
+            data_dir                        TEXT,
             experiment_start_time           TEXT,
             experiment_end_time             TEXT,
             model_train_duration            REAL,
@@ -83,6 +88,7 @@ def create_nessesary_tables(conn):
             confusion_matrix        JSONB,
             PRIMARY KEY (experiment_name, performed_epoch, fold),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS model_train_sent_dataset_log (
@@ -98,6 +104,7 @@ def create_nessesary_tables(conn):
             sentence_sequence       TEXT,
             PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
 
     # [dictionary_matching_performance, dictionary_matching_sent_dataset_log]
@@ -117,6 +124,7 @@ def create_nessesary_tables(conn):
             dictionary_size_delta_rate  REAL,
             confusion_matrix            JSONB,
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS dictionary_matching_sent_dataset_log (
@@ -131,6 +139,7 @@ def create_nessesary_tables(conn):
             sentence_sequence       TEXT,
             PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
 
     # [ner_regex_matching_performance, ner_regex_matching_sent_dataset_log]
@@ -148,6 +157,7 @@ def create_nessesary_tables(conn):
             mismatch_delta_rate         REAL,
             confusion_matrix            JSONB,
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS ner_regex_matching_sent_dataset_log (
@@ -162,13 +172,14 @@ def create_nessesary_tables(conn):
             sentence_sequence       TEXT,
             PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
 
     # [model_validation_performance, model_validation_sent_dataset_log]
     # 5. 모델검증 프로세스에 관한 테이블
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS model_validation_performance (
-            experiment_name         TEXT,
+            experiment_name         TEXT PRIMARY KEY,
             start_time              TIMESTAMPTZ,
             end_time                TIMESTAMPTZ,
             model_weight_file_path  TEXT,
@@ -177,8 +188,8 @@ def create_nessesary_tables(conn):
             recall                  REAL,
             f1                      REAL,
             confusion_matrix        JSONB,
-            PRIMARY KEY (experiment_name, performed_epoch),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS model_validation_sent_dataset_log (
@@ -193,6 +204,7 @@ def create_nessesary_tables(conn):
             sentence_sequence       TEXT,
             PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
 
     # [generation_augmented_performance, generation_augmented_sent_dataset_log]
@@ -208,6 +220,7 @@ def create_nessesary_tables(conn):
             auto_validated_counts   INTEGER,
             manual_validated_counts INTEGER,
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS generation_augmented_sent_dataset_log (
@@ -219,6 +232,7 @@ def create_nessesary_tables(conn):
             validated_label         TEXT,
             source_file_name        TEXT,
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
+        );
     """)
 
     conn.commit()

@@ -30,9 +30,10 @@ def model_validation_process_5(conn, experiment_name, model, dataloader, device,
             outputs = model(input_ids=input_ids,
                             attention_mask=attention_mask,
                             token_start=token_start,
-                            token_end=token_end)
+                            token_end=token_end,
+                            labels=labels)
             
-            loss = loss_fn(outputs["logits"], labels)
+            loss = outputs['loss']
             total_loss += loss.item()
 
             pred_labels = torch.argmax(outputs['logits'], dim=-1)
@@ -48,8 +49,8 @@ def model_validation_process_5(conn, experiment_name, model, dataloader, device,
                     batch['sentence'][i],
                     batch['span_token'][i],
                     batch['idx'][i].item(),
-                    id_2_label(labels[i].item()),
-                    id_2_label(pred_labels[i].item()),
+                    id_2_label[labels[i].item()],
+                    id_2_label[pred_labels[i].item()],
                     batch['file_name'][i],
                     batch['sentence_seq'][i]
                 )

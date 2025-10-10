@@ -6,7 +6,7 @@ import torch
 
 
 class Classifier(nn.Module):
-    def __init__(self, pretrained_bert, num_labels, use_focal=True, alpha=1.0, gamma=2.0, reduction="mean"):
+    def __init__(self, pretrained_bert, num_labels, use_focal=False, alpha=1.0, gamma=2.0, reduction="mean"):
         super().__init__()
 
         # Classifier basic config
@@ -67,13 +67,13 @@ class Classifier(nn.Module):
         # 분류 결과(logits)
         logits = self.classifier( span_representation )
 
-        if labels:
+        if labels is not None:
             if self.use_focal:
                 loss = self.focal_loss(logits=logits, labels=labels)
             else:
                 loss = F.cross_entropy(input=logits, target=labels)
 
-        return {
-            "logits": logits,
-            "loss": loss
-            }
+            return {
+                "logits": logits,
+                "loss": loss
+                }
