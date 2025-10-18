@@ -47,10 +47,9 @@ def model_train_validation_process_2(conn, experiment_name, model, epoch, datalo
                 model_train_sent_dataset_log_scheme = (
                     experiment_name,
                     batch['sentence_id'][i],
-                    epoch,
                     batch['sentence'][i],
+                    epoch,
                     batch['span_token'][i],
-                    batch['idx'][i].item(),
                     id_2_label[labels[i].item()],
                     id_2_label[pred_labels[i].item()],
                     batch['file_name'][i],

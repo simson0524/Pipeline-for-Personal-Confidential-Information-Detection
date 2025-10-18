@@ -116,7 +116,7 @@ def dictionary_matching_process_3(conn, experiment_name, dataloader, label_2_id,
         'hit': hit,
         'wrong': wrong,
         'mismatch': mismatch,
-        'fetched_dictionary_size': fetched_dictionary_size,
+        'fetched_dictionary_size': fetched_dictionary_size + 0.00000001,
         'start_time': start_time,
         'end_time': end_time,
         'duration': duration

@@ -2,22 +2,33 @@
 
 model:
   model_name: "klue/roberta-base"
-  pii_state_dir: "/250924_01_01_best_model.pt"  # 개인정보 모델 가중치 경로 / 이게 필ㅛㅏ 없ㅓㅕㅆ구나..
-  confid_state_dir: "기밀정보_가중치_경로"  # 기밀정보 모델 가중치 경로
+  pii_state_dir: # 없는경우 무조건 'null'
+    - "checkpoints/experiment_251013_10_01/fold0_epoch7_model.pt"
+    - "checkpoints/experiment_251013_10_01/fold1_epoch10_model.pt"
+    - "checkpoints/experiment_251013_10_01/fold2_epoch12_model.pt"
 
 exp:
   is_pii: True  # 개인정보모델 학습이면 True, 기밀정보모델 학습이면 False
-  name: "251008_01"  # "실험일자(YYMMDD)_실험순번(SS)" 
+  name: "251013_11"  # "실험일자(YYMMDD)_실험순번(SS)" 
   batch_size: 32
-  num_epochs: 1
+  num_epochs: 15
   learning_rate: 1e-5
   device: "cuda:0"  # "cpu" or "cuda:0" or "cuda:1"
-  sampling_ratio: 1.0 # 데이터 불균형 처리 비율
-  k_fold: 3
+  sampling_ratio: 1000.0 # 데이터 불균형 처리 비율
+  k_fold: 1
   generation_num: 5 # [test] 문맥 문장 데이터 생성 시 생성할 샘플의 수
 
 data:
-  train_data_dir: "data/01.인사부"  # 학습데이터가 들어있는 directory
+  train_data_dir: "data/03.관리부"  # 학습데이터가 들어있는 directory
+  valid_data_dir: null
+  answer_sheet_dir: # 없는 경우 null, 있는 경우 "domain_id": "dir"
+    "1": "data/answer_sheet/01.인사부_개인정보_정답지.csv"
+    "2": "data/answer_sheet/02.생산부_개인정보_정답지.csv"
+    "3": "data/answer_sheet/03.관리부_개인정보_정답지.csv"
+    "4": "data/answer_sheet/04.영업부_개인정보_정답지.csv"
+    "5": "data/answer_sheet/05.기술부_개인정보_정답지.csv"
+  raw_data_based_dictionary_init_data_dir: # 없는 경우 null, 있는 경우 "domain_id": "dir"
+    null
 
 label_mapping:
   pii_label_2_id:
@@ -41,3 +52,6 @@ db:
   dbname: "postgres"
   user: "student1"
   password: "onestone"
+
+api_key:
+  label_studio: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2NzQ2MjgzMywiaWF0IjoxNzYwMjYyODMzLCJqdGkiOiI1ZTg3MjYxZTIyMDY0Y2FkODYxZjA3Yzk1YjUxM2M4YyIsInVzZXJfaWQiOiIxIn0.fZJKc8_yZA09uHDKqIreTy1VtFTkFLIVVj6QFjwbjjc"

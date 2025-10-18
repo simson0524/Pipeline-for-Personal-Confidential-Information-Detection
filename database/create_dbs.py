@@ -16,31 +16,18 @@ def get_connection(config):
 def create_nessesary_tables(conn):
     cursor = conn.cursor()
 
-    # # [train_set_domain]
-    # # 데이터셋( Train Set_{D} )
-    # cursor.execute(f"""
-    #     CREATE TABLE IF NOT EXISTS train_set_domain (
-    #         sentence           TEXT,
-    #         sentence_id        TEXT,
-    #         source_file_name   TEXT,
-    #         sentence_sequence  TEXT,
-    #         char_start_index   TEXT,
-    #         char_end_index     TEXT,
-    #         ground_truth       TEXT,
-    #         span_token         TEXT,
-    #         domain             TEXT
-    #     );
-    # """)
-
     # [personal/confidential_info_dictionary]
     # 개인/기밀정보 사전 스키마
     for table in ['personal_info_dictionary', 'confidential_info_dictionary']:
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {table} (
-                span_token            TEXT PRIMARY KEY,
-                first_insertion_loop  TEXT,
-                insertion_counts      INTEGER DEFAULT 0,
-                deletion_counts       INTEGER DEFAULT 0
+                domain_id                        TEXT,
+                span_token                       TEXT,
+                z_score                          REAL,
+                first_inserted_experiment_name   TEXT,
+                insertion_counts                 INTEGER,
+                deletion_counts                  INTEGER,
+                PRIMARY KEY (domain_id, span_token)
             );
         """)
 
@@ -54,17 +41,17 @@ def create_nessesary_tables(conn):
             batch_size                      TEXT,
             num_epochs                      TEXT,
             learning_rate                   TEXT,
-            data_dir                        TEXT,
+            train_dir                       TEXT,
+            valid_dir                       TEXT,
             experiment_start_time           TEXT,
             experiment_end_time             TEXT,
-            model_train_duration            REAL,
-            dictionary_matching_duration    REAL,
-            ner_regex_matching_duration     REAL,
-            model_validation_duration       REAL,
-            aug_sent_generation_duration    REAL,
-            aug_sent_auto_valid_duration    REAL,
-            aug_sent_manual_valid_duration  REAL,
-            total_document_counts           INTEGER,
+            model_train_duration            TEXT,
+            dictionary_matching_duration    TEXT,
+            ner_regex_matching_duration     TEXT,
+            model_validation_duration       TEXT,
+            aug_sent_generation_duration    TEXT,
+            aug_sent_auto_valid_duration    TEXT,
+            aug_sent_manual_valid_duration  TEXT,
             total_sentence_counts           INTEGER,
             total_annotated_token_counts    INTEGER
         );
@@ -76,7 +63,6 @@ def create_nessesary_tables(conn):
         CREATE TABLE IF NOT EXISTS model_train_performance (
             experiment_name         TEXT,
             performed_epoch         INTEGER,
-            fold                    TEXT,
             start_time              TIMESTAMPTZ,
             end_time                TIMESTAMPTZ,
             model_weight_file_path  TEXT,
@@ -86,7 +72,7 @@ def create_nessesary_tables(conn):
             recall                  REAL,
             f1                      REAL,
             confusion_matrix        JSONB,
-            PRIMARY KEY (experiment_name, performed_epoch, fold),
+            PRIMARY KEY (experiment_name, performed_epoch),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
         );
     """)
@@ -97,12 +83,10 @@ def create_nessesary_tables(conn):
             sentence                TEXT,
             validated_epoch         INTEGER,
             span_token              TEXT,
-            index_in_dataset_class  INTEGER,
             ground_truth            TEXT,
             prediction              TEXT,
             source_file_name        TEXT,
             sentence_sequence       TEXT,
-            PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
         );
     """)
@@ -132,12 +116,10 @@ def create_nessesary_tables(conn):
             sentence_id             TEXT,
             sentence                TEXT,
             span_token              TEXT,
-            index_in_dataset_class  INTEGER,
             ground_truth            TEXT,
             prediction              TEXT,
             source_file_name        TEXT,
             sentence_sequence       TEXT,
-            PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
         );
     """)
@@ -165,12 +147,10 @@ def create_nessesary_tables(conn):
             sentence_id             TEXT,
             sentence                TEXT,
             span_token              TEXT,
-            index_in_dataset_class  INTEGER,
             ground_truth            TEXT,
             prediction              TEXT,
             source_file_name        TEXT,
             sentence_sequence       TEXT,
-            PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
         );
     """)
@@ -183,7 +163,7 @@ def create_nessesary_tables(conn):
             start_time              TIMESTAMPTZ,
             end_time                TIMESTAMPTZ,
             model_weight_file_path  TEXT,
-            best_performed_epoch    INTEGER,
+            best_performed_epoch    JSONB,
             precision               REAL,
             recall                  REAL,
             f1                      REAL,
@@ -197,12 +177,10 @@ def create_nessesary_tables(conn):
             sentence_id             TEXT,
             sentence                TEXT,
             span_token              TEXT,
-            index_in_dataset_class  INTEGER,
             ground_truth            TEXT,
             prediction              TEXT,
             source_file_name        TEXT,
             sentence_sequence       TEXT,
-            PRIMARY KEY (experiment_name, sentence_id, span_token),
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
         );
     """)
@@ -211,14 +189,14 @@ def create_nessesary_tables(conn):
     # 6. 문장증강 프로세스에 관한 테이블
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS generation_augmented_performance (
-            experiment_name         TEXT PRIMARY KEY,
-            generation_start_time   TIMESTAMPTZ,
-            auto_valid_start_time   TIMESTAMPTZ,
-            manual_valid_start_time TIMESTAMPTZ,
-            end_time                TIMESTAMPTZ,
-            total_generation_counts INTEGER,
-            auto_validated_counts   INTEGER,
-            manual_validated_counts INTEGER,
+            experiment_name              TEXT PRIMARY KEY,
+            start_time                   TIMESTAMPTZ,
+            auto_validation_start_time   TIMESTAMPTZ,
+            manual_validation_start_time TIMESTAMPTZ,
+            end_time                     TIMESTAMPTZ,
+            total_generation_counts      INTEGER,
+            auto_validated_counts        INTEGER,
+            manual_validated_counts      INTEGER,
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
         );
     """)
@@ -230,7 +208,6 @@ def create_nessesary_tables(conn):
             span_token              TEXT,
             target_ground_truth     TEXT,
             validated_label         TEXT,
-            source_file_name        TEXT,
             FOREIGN KEY (experiment_name) REFERENCES experiment (experiment_name) ON DELETE CASCADE
         );
     """)

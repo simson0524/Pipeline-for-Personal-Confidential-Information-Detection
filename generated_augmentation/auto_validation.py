@@ -53,9 +53,8 @@ def auto_validation(span_token, samples, target_label, is_pii=True, model_name="
         input=prompt
     )
 
-    if samples:
-        validation_results = []
-
+    validation_results = []
+    if target_label != '일반정보':
         for _, sample in enumerate( samples ):
             if sample:
                 iter_response = client.responses.create(
@@ -71,6 +70,9 @@ def auto_validation(span_token, samples, target_label, is_pii=True, model_name="
                     validation_results.append( (False, validated_label) )
             else:
                 validation_results.append( (False, None) )
+    else:
+        for _ in samples:
+            validation_results.append( (False, None) )
     
     end_time = datetime.now()
 

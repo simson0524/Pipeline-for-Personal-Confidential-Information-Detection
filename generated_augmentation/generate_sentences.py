@@ -3,7 +3,7 @@
 from datetime import datetime
 from openai import OpenAI
 import os
-
+import re
 
 ### API KEY ###
 JH_GPT_API_KEY = os.environ.get("JH_GPT_API_KEY")
@@ -112,16 +112,35 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
     output = response.output_text
     print( output )
 
+    # try:
+    #     samples = output.split("\n===== 문장들의 시작 =====")
+    #     pred_samples = samples[1].split(f"\n=== {pred_label} 문장 ===\n")
+    #     pred_samples[-1] = pred_samples[-1].split("\n===== 문장들의 끝 =====")[0]
+    #     gt_samples = samples[2].split(f"\n=== {gt_label} 문장 ===\n")
+    #     gt_samples[-1] = gt_samples[-1].split("\n===== 문장들의 끝 =====")[0]
+    # except Exception as e:
+    #     print(f"[### Exception occured ###]\n{e}")
+    #     pred_samples = []
+    #     gt_samples = []
+
     try:
-        samples = output.split("\n===== 문장들의 시작 =====")
-        pred_samples = samples[1].split(f"\n=== {pred_label} 문장 ===\n")
-        pred_samples[-1] = pred_samples[-1].split("\n===== 문장들의 끝 =====")[0]
-        gt_samples = samples[2].split(f"\n=== {gt_label} 문장 ===\n")
-        gt_samples[-1] = gt_samples[-1].split("\n===== 문장들의 끝 =====")[0]
+        # 1. pred_label 문장들 추출
+        # '=== pred_label 문장 ===' 바로 뒤에 오는 내용을 추출합니다.
+        pred_pattern = f"=== {pred_label} 문장 ===\s*\[?(.*?)\]?(?=\s*===|\s*=====)"
+        pred_matches = re.findall(pred_pattern, output, re.DOTALL)
+        # 추출된 문장들의 앞뒤 공백 및 줄바꿈을 제거합니다.
+        pred_samples = [s.strip() for s in pred_matches]
+
+        # 2. gt_label 문장들 추출
+        gt_pattern = f"=== {gt_label} 문장 ===\s*\[?(.*?)\]?(?=\s*===|\s*=====)"
+        gt_matches = re.findall(gt_pattern, output, re.DOTALL)
+        gt_samples = [s.strip() for s in gt_matches]
+
     except Exception as e:
         print(f"[### Exception occured ###]\n{e}")
         pred_samples = []
         gt_samples = []
+
 
     # 로그용
     print(f"\n\n[{pred_label} 문장]\n")

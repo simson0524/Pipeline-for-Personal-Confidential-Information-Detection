@@ -14,12 +14,11 @@ import yaml
 import os
 
 
-def generated_augmentation_process_6(conn, config):
+def generated_augmentation_process_6(conn, experiment_name, config):
     start_time = datetime.now()
 
     # Config
     train_data_dir = config['data']['train_data_dir']
-    experiment_name = config['exp']['name']
     is_pii = config['exp']['is_pii']
     if is_pii:
         id_2_label = config['label_mapping']['pii_id_2_label']
@@ -30,13 +29,15 @@ def generated_augmentation_process_6(conn, config):
     generation_candidates = fetch_generation_candidates(
         conn=conn,
         experiment_name=experiment_name
-    ) # [(experiment_name, sentence_id, sentence, span_token, index_in_datset_class, ground_truth, prediction, source_file_name, sentence_sequence), ]
+    )
 
     manual_chk_list = []
     generation_augmented_sent_dataset_log = []
 
     # 문장생성 및 자동검증
-    for _, _, _, span_token, _, gt, pred, _, _ in tqdm(generation_candidates, desc="문맥 문장 데이터 생성중..."):
+    for idx, (_, _, _, span_token, _, gt, pred, _, _) in enumerate(tqdm(generation_candidates, desc="문맥 문장 데이터 생성중...")):
+        if idx % 5 != 0:
+            continue
         wrong_test = 0
         wrong_priority = 0
 
@@ -50,7 +51,7 @@ def generated_augmentation_process_6(conn, config):
         )
 
         # gt_samples 검증
-        valid_results_1, samples_1 = auto_validation(
+        valid_results_1, samples_1, start_time_1, end_time_1, duration_1 = auto_validation(
             span_token=span_token,
             samples=gt_samples,
             target_label=gt,
@@ -58,7 +59,7 @@ def generated_augmentation_process_6(conn, config):
         )
 
         # pred_samples 검증
-        valid_results_2, samples_2 = auto_validation(
+        valid_results_2, samples_2, start_time_2, end_time_2, duration_2 = auto_validation(
             span_token=span_token,
             samples=pred_samples,
             target_label=pred,
@@ -71,7 +72,7 @@ def generated_augmentation_process_6(conn, config):
 
         # 자동검증결과에 따라 검증된 친구는 자동으로 합치기, 안 된 친구는 수동 검증으로
         for i, (valid_result, sample) in enumerate(zip(valid_results, samples)):
-            dataset_id = f"sample_99_{(experiment_name.split('_')[-1])}_{str(i).zfill(6)}"
+            dataset_id = f"sample_99_{(experiment_name)}_{str(i).zfill(6)}"
             if valid_result[0]:
                 char_start = sample.find(span_token, 0)
                 char_end = char_start + len(span_token)
@@ -99,8 +100,9 @@ def generated_augmentation_process_6(conn, config):
             )
 
             generation_augmented_sent_dataset_log.append( generation_augmented_sent_dataset_log_scheme )
+
     
     insert_many_rows(conn=conn, table_name='generation_augmented_sent_dataset_log', data_list=generation_augmented_sent_dataset_log)
                 
-    # # 수동검증
-    # manual_validation(manual_chk_list=manual_chk_list)
+    # 수동검증
+    manual_validation(manual_chk_list=manual_chk_list)

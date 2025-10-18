@@ -10,6 +10,7 @@ from matplotlib import rc
 from label_studio_sdk.client import LabelStudio
 import requests
 import psycopg2
+import json
 import ast  
 
 
@@ -48,7 +49,7 @@ class ConfusionMatrixPipeline:
                 break
 
         print(f"🚀 Label Studio 서버 실행 중... 포트={new_port}")
-        subprocess.Popen(["label-studio", "start", "--port", str(new_port)], shell=True)
+        subprocess.run(["/home/student1/venv_1/bin/label-studio", "start", "--port", str(new_port)], shell=True)
         self.label_studio_url = f"http://localhost:{new_port}"
 
         # 서버 준비 대기
@@ -78,7 +79,7 @@ class ConfusionMatrixPipeline:
     def get_connection(self):
         return psycopg2.connect(**self.db_config)
 
-    def load_last_row_as_matrix(self, table_name, column_name, is_confidential=False):
+    def load_matrices_by_experiment(self, config, experiment_name, table_name, column_name, is_confidential=False):
         """
         DB에서 마지막 행을 불러와서 confusion matrix로 반환.
         
@@ -89,21 +90,49 @@ class ConfusionMatrixPipeline:
         """
         conn = self.get_connection()
         try:
-            query = f"""
-                SELECT {column_name}
-                FROM {table_name}
-                ORDER BY end_time DESC
-                LIMIT 1
-            """
-            df = pd.read_sql(query, conn)
+            if table_name == 'model_train_performance':
+                query = f"""
+                    SELECT confusion_matrix
+                    FROM "{table_name}"
+                    WHERE experiment_name = %s AND performed_epoch = %s
+                """
+                df = pd.read_sql(query, conn, params=(experiment_name, config['exp']['num_epochs']))
+            else:
+                query = f"""
+                    SELECT confusion_matrix
+                    FROM "{table_name}"
+                    WHERE experiment_name = %s
+                """
+                df = pd.read_sql(query, conn, params=(experiment_name, ))
         finally:
             conn.close()
 
         if df.empty:
             raise ValueError(f"{table_name} 테이블에서 데이터를 가져올 수 없습니다.")
 
-        # DB에서 가져온 값 (리스트 문자열)
-        return df.iloc[0][column_name]
+        # # 시리즈(Series)에서 첫 번째 값(실제 데이터)을 추출합니다.
+        # row_value = df['confusion_matrix'].iloc[0]
+
+        # # 만약 값이 문자열이면 json.loads로 리스트로 변환
+        # if isinstance(row_value, str):
+        #     matrix_list = json.loads(row_value)
+        # else:
+        #     matrix_list = row_value  # 이미 리스트이면 그대로 사용
+
+        # # 최종적으로 numpy 배열로 변환하여 반환
+        # return np.array(matrix_list)
+
+        matrices = []
+        for row_value in df['confusion_matrix']:
+            if isinstance(row_value, str):
+                matrix_list = json.loads(row_value)
+            else:
+                matrix_list = row_value  # 이미 리스트/딕셔너리 형태인 경우
+            
+            matrices.append(np.array(matrix_list))
+
+        return matrices
+
 
         # # 문자열을 실제 리스트로 변환
         # if isinstance(row_value, str):
@@ -120,38 +149,54 @@ class ConfusionMatrixPipeline:
     # ------------------------
     # 4️⃣ confusion matrix 생성 및 저장
     # ------------------------
-    def generate_confusion_matrix_png(self, tables, labels, is_pii=True, output_file="matrix.png"):
+    def generate_confusion_matrix_png(self, config, experiment_name, tables, labels, is_pii=True, output_file="matrix.png"):
         """
         개인정보(3x3)와 기밀정보(2x2)를 분리해서 PNG 생성
         :param tables: 테이블 리스트
         :param labels: 라벨 리스트
         :param is_pii: True → 개인정보(3x3), False → 기밀정보(2x2)
         """
-        matrices = [self.load_last_row_as_matrix(t, labels, is_confidential=not is_pii) for t in tables]
+        matrices = [
+            matrix  # 3. 최종적으로 리스트에 담길 개별 matrix
+            for t in tables  # 1. 기존처럼 각 테이블을 순회하고
+            for matrix in self.load_matrices_by_experiment(config=config, table_name=t, experiment_name=experiment_name, column_name=labels)  # 2. 함수가 반환한 리스트를 다시 순회
+        ]
 
-        fig, axes = plt.subplots(1, len(matrices), figsize=(5*len(matrices), 5))
+        print(matrices) ## 로그용
+
+        fig, axes = plt.subplots(1, len(matrices), figsize=(10*len(matrices), 10))
 
         if len(matrices) == 1:
             axes = [axes]  # axes가 단일 객체일 경우 리스트로 변환
 
+        fold = config['exp']['k_fold']
+
+        plot_title_list = []
+
+        for i in range(fold):
+            title = f"model_train_performance_fold_{i+1}"
+            plot_title_list.append(title)
+
+        plot_title_list += tables[1:]
+
         for i, mat in enumerate(matrices):
             total = mat.sum()
             ax = axes[i]
-            cmap = "Reds" if "모델" in tables[i] else "Blues"
+            cmap = "Blues"
             ax.imshow(mat, cmap=cmap)
             for r in range(mat.shape[0]):
                 for c in range(mat.shape[1]):
-                    val = mat[r, c]
+                    val = int(mat[r, c])
                     perc = (val / total * 100) if total > 0 else 0
                     ax.text(c, r, f"{val}\n({perc:.1f}%)", ha="center", va="center", color="black")
-            ax.set_xticks(np.arange(len(labels)))
-            ax.set_yticks(np.arange(len(labels)))
-            ax.set_xticklabels(labels)
+            ax.set_xticks(np.arange(mat.shape[1]))
+            ax.set_yticks(np.arange(mat.shape[0]))
+            ax.set_xticklabels(['hit', 'wrong', 'mismatch']) if (i == len(matrices)-2 or i == len(matrices)-3) else ax.set_xticklabels(labels)
             ax.set_yticklabels(labels)
-            title_prefix = "개인정보" if is_pii else "기밀정보"
-            ax.set_title(f"{title_prefix} {tables[i]}")
-            ax.set_xlabel("Predicted")
-            ax.set_ylabel("Actual")
+            title_prefix = "Personal" if is_pii else "Confidential"
+            ax.set_title(f"{title_prefix} {plot_title_list[i]}")
+            ax.set_xlabel("Ground Truth")
+            ax.set_ylabel("Prediction")
 
         plt.tight_layout()
         plt.savefig(output_file)
@@ -162,22 +207,22 @@ class ConfusionMatrixPipeline:
     # ------------------------
     # 5️⃣ 프로젝트 생성 및 태스크 업로드
     # ------------------------
-    def setup_project_and_upload_task(self, png_file):
+    def setup_project_and_upload_task(self, experiment_name, png_file):
         with open(png_file, "rb") as f:
             img_bytes = f.read()
         img_base64 = "data:image/png;base64," + base64.b64encode(img_bytes).decode()
         task = [{"data": {"image": img_base64}}]
 
         projects = self.ls.projects.list()
-        self.project = next((p for p in projects if p.title == "ConfusionMatrix_Eval"), None)
+        self.project = next((p for p in projects if p.title == experiment_name), None)
 
         if self.project is None:
             self.project = self.ls.projects.create(
-                title="ConfusionMatrix_Eval",
+                title=experiment_name,
                 label_config="""
                 <View>
                   <Image name="image" value="$image"/>
-                  <Header value="학습을 계속하시겠습니까?"/>
+                  <Header value="파이프라인을 계속하시겠습니까?"/>
                   <Choices name="next_step" toName="image" choice="single">
                     <Choice value="Yes"/>
                     <Choice value="No"/>
@@ -242,26 +287,28 @@ class ConfusionMatrixPipeline:
     # ------------------------
     # 8️⃣ 전체 실행
     # ------------------------
-    def run(self, is_pii=True):
+    def run(self, config, experiment_name, is_pii=True):
         self.start_label_studio()
         self.connect_sdk()
 
         if is_pii:
-            labels = ["개인정보", "준식별자", "일반정보"]
-            tables = ['dictionary_matching_performance', 'ner_regex_matching_performance', 'model_validation_performance']
+            labels = ["0", "1", "2"]
+            tables = ['model_train_performance','dictionary_matching_performance', 'ner_regex_matching_performance', 'model_validation_performance']
             output_file = "pii_matrix.png"
         else:
-            labels = ["기밀정보", "일반정보"]
-            tables = ['dictionary_matching_performance', 'ner_regex_matching_performance', 'model_validation_performance']
+            labels = ["0", "1"]
+            tables = ['model_train_performance','dictionary_matching_performance', 'ner_regex_matching_performance', 'model_validation_performance']
             output_file = "conf_matrix.png"
 
         png_file = self.generate_confusion_matrix_png(
+            config=config,
+            experiment_name=experiment_name,
             tables=tables,
             labels=labels,
             is_pii=is_pii,
             output_file=output_file
         )
-        self.setup_project_and_upload_task(png_file)
+        self.setup_project_and_upload_task(experiment_name, png_file)
 
         if self.uploaded_task_ids:
             last_task_id = self.uploaded_task_ids[-1]
@@ -274,7 +321,7 @@ class ConfusionMatrixPipeline:
 
 
 ###########파이프라인 실행##################
-def metric_viewer(config, experiment_name, is_pii=True):
+def metric_viewer(config, experiment_name, API_KEY, is_pii=True):
     db_config = {
         "host": config['db']['host'],
         "port": config['db']['port'],
@@ -283,17 +330,17 @@ def metric_viewer(config, experiment_name, is_pii=True):
         "password": config['db']['password']
     }
 
-    API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2NDcwNzg2OCwiaWF0IjoxNzU3NTA3ODY4LCJqdGkiOiI3NmU1YWRlNmMzNjI0ZDgyOTgxZWI2MjNlMTBlZTdhZiIsInVzZXJfaWQiOiIxIn0.00Mk2vMGBll4YBzSvbrE1rzu40GpBYkP9MVhiFbv-F0"
-
     if is_pii:
         # 개인정보 프로젝트 실행
         pipeline_pii = ConfusionMatrixPipeline(API_KEY=API_KEY, db_config=db_config, experiment_name=experiment_name)
         print("===== 개인정보 프로젝트 실행 =====")
-        pii_result = pipeline_pii.run(is_pii=True)  # 개인정보만
-        print("✅ 개인정보 프로젝트 결과:", pii_result)
+        result = pipeline_pii.run(config, experiment_name, is_pii=True)  # 개인정보만
+        print("✅ 개인정보 프로젝트 결과:", result)
     else:
         # 기밀정보 프로젝트 실행
         pipeline_conf = ConfusionMatrixPipeline(API_KEY=API_KEY, db_config=db_config, experiment_name=experiment_name)
         print("===== 기밀정보 프로젝트 실행 =====")
-        conf_result = pipeline_conf.run(is_pii=False)  # 기밀정보만
-        print("✅ 기밀정보 프로젝트 결과:", conf_result)
+        result = pipeline_conf.run(config, experiment_name, is_pii=False)  # 기밀정보만
+        print("✅ 기밀정보 프로젝트 결과:", result)
+
+    return result

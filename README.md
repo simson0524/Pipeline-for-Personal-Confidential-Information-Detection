@@ -4,7 +4,7 @@
 ### [Project Structure]
 root/
 │
-├── classifier/  ### 리팩토링완료 ###
+├── classifier/
 │   ├── model.py 
 │   └── {customized}_model.py
 │
@@ -63,7 +63,8 @@ root/
 │   │
 │   ├── answer_sheet/
 │   │   │   ...
-│   │   └── {부서명}_answer_sheet.csv
+│   │   ├── {부서명}_answer_sheet.csv
+│   │   └── answer_sheet_to_dictionary.py [삭제 예정] 이거 안 쓸 것 같음. init_dictionary.py로 대체
 │   │
 │   ├── train_set_{D}/
 │   │   │   ...
@@ -78,6 +79,7 @@ root/
 │       └── {experiment_name}_{table_name}_log.csv  or  .txt
 │
 ├── run_pipeline.py
+├── init_dictionary.py
 ├── run_config.yaml
 │
 ├── README.md

@@ -31,9 +31,11 @@ def add_validated_sentence_to_train_set(config, sentence, dataset_id, span_token
         ]
     }
 
+    file_name = f"{dataset_id}.json"
+
     os.makedirs(save_dir, exist_ok=True)
     
-    file_path = os.path.join(save_dir, dataset_id)
+    file_path = os.path.join(save_dir, file_name)
 
-    with open(file_path, 'w', encoding="uft-8") as f:
+    with open(file_path, 'w', encoding="utf-8") as f:
         json.dump(sentence_dataset, f, ensure_ascii=False, indent=2)
