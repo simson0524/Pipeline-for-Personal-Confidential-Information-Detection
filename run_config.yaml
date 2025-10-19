@@ -17,18 +17,11 @@ exp:
   sampling_ratio: 1000.0 # 데이터 불균형 처리 비율
   k_fold: 1
   generation_num: 5 # [test] 문맥 문장 데이터 생성 시 생성할 샘플의 수
+  z_score_threshold: 1.5
 
 data:
   train_data_dir: "data/03.관리부"  # 학습데이터가 들어있는 directory
   valid_data_dir: null
-  answer_sheet_dir: # 없는 경우 null, 있는 경우 "domain_id": "dir"
-    "1": "data/answer_sheet/01.인사부_개인정보_정답지.csv"
-    "2": "data/answer_sheet/02.생산부_개인정보_정답지.csv"
-    "3": "data/answer_sheet/03.관리부_개인정보_정답지.csv"
-    "4": "data/answer_sheet/04.영업부_개인정보_정답지.csv"
-    "5": "data/answer_sheet/05.기술부_개인정보_정답지.csv"
-  raw_data_based_dictionary_init_data_dir: # 없는 경우 null, 있는 경우 "domain_id": "dir"
-    null
 
 label_mapping:
   pii_label_2_id:
@@ -55,3 +48,13 @@ db:
 
 api_key:
   label_studio: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2NzQ2MjgzMywiaWF0IjoxNzYwMjYyODMzLCJqdGkiOiI1ZTg3MjYxZTIyMDY0Y2FkODYxZjA3Yzk1YjUxM2M4YyIsInVzZXJfaWQiOiIxIn0.fZJKc8_yZA09uHDKqIreTy1VtFTkFLIVVj6QFjwbjjc"
+
+dictionary_init:
+  answer_sheet_dir: # 없는 경우 null, 있는 경우 "domain_id": "dir"
+    "1": "data/answer_sheet/01.인사부_개인정보_정답지.csv"
+    "2": "data/answer_sheet/02.생산부_개인정보_정답지.csv"
+    "3": "data/answer_sheet/03.관리부_개인정보_정답지.csv"
+    "4": "data/answer_sheet/04.영업부_개인정보_정답지.csv"
+    "5": "data/answer_sheet/05.기술부_개인정보_정답지.csv"
+  raw_data_based_dictionary_init_data_dir: # 없는 경우 null, 있는 경우 "domain_id": "dir"
+    null

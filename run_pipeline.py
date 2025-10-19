@@ -22,6 +22,7 @@ import numpy as np
 import torch
 import yaml
 import json
+import os
 
 
 # 실험 Config
@@ -107,8 +108,8 @@ while True:
     tokenizer  = AutoTokenizer.from_pretrained(model_name, use_fast=True)
 
     # Load All Data
-    all_train_json_data = load_all_json(train_dir)
-    all_valid_json_data = load_all_json(valid_dir)
+    all_train_json_data, total_train_sentence_counts = load_all_json(train_dir)
+    all_valid_json_data, total_valid_sentence_counts = load_all_json(valid_dir)
     all_train_dataset = PipelineDataset(
         experiment_name=experiment_name,
         json_data=all_train_json_data,
@@ -451,7 +452,7 @@ while True:
 
 
     ### ------------------------------------------------------------
-    ### 사전등재리스트 운용
+    ### [HUMAN 개입] 사전등재리스트 운용
     ### ------------------------------------------------------------
     
     # 4. NER/REGEX 매칭검증, 5. 모델검증 에서 개인/기밀정보로 정탐인 친구들만 사전등재리스트에 후보로 추림 
@@ -465,6 +466,13 @@ while True:
     ner_regex_matching_candidates = fetch_matching_predictions(conn=conn, table_name='ner_regex_matching_sent_dataset_log', experiment_name=experiment_name, dict_label=dict_label)
     model_validation_candidates = fetch_matching_predictions(conn=conn, table_name='model_validation_sent_dataset_log', experiment_name=experiment_name, dict_label=dict_label)
     all_candidates = ner_regex_matching_candidates + model_validation_candidates
+
+    # Z-score로 threshold 설정하기 위함
+    z_score_threshold = config['exp']['z_score_threshold']
+
+    """
+    TODO : 도메인 별 Z-score 표 필요(Dictionary)
+    """
 
     ### 조건만족하는 span_token 모음
     condition_satisfied_span_token_set = set()
@@ -560,7 +568,11 @@ while True:
     ### ------------------------------------------------------------
     ### 6. 문서 증강 + [HUMAN 개입] 수동 검증
     ### ------------------------------------------------------------
-    generated_augmentation_process_6(conn, experiment_name, config)
+    generation_duration, manual_validation_duration = generated_augmentation_process_6(
+        conn=conn, 
+        experiment_name=experiment_name, 
+        config=config
+        )
 
 
 
@@ -569,6 +581,17 @@ while True:
     ### ------------------------------------------------------------
     experiment_end_time = datetime.now()
     previous_experiment_name = experiment_name
+
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='experiment_end_time', new_value=experiment_end_time)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='model_train_duration', new_value=model_train_duration)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='dictionary_matching_duration', new_value=dictionary_matching_duration)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='ner_regex_matching_duration', new_value=ner_regex_matching_duration)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='model_validation_duration', new_value=model_validation_duration)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='aug_sent_generation_duration', new_value=generation_duration)
+    # update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='aug_sent_auto_valid_duration', new_value=)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='aug_sent_manual_valid_duration', new_value=manual_validation_duration)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='total_sentence_counts', new_value=total_train_sentence_counts)
+    update_specific_row(conn=conn, table_name='experiment', pk_column_name='experiment_name', pk_value=experiment_name, target_column='total_annotated_token_counts', new_value=len(all_train_dataset))
 
 
 conn.close()

@@ -38,12 +38,12 @@ root/
 │   ├── generate_sentences.py
 │   ├── add_validated_sentence_to_train_set.py
 │   ├── auto_validation.py
-│   └── manual_validation.py
+│   └── manual_validation.py ## 삭제예정 : 왜냐하면 manual_validation_labeler에서 직접 쓰기로
 │
 ├── labeling_tools/
-│   ├── dictionary_labeler.py
+│   ├── dictionary_candidate_labeler.py
 │   ├── metric_viewer.py
-│   └── manual_labeler.py
+│   └── manual_validation_labeler.py
 │
 ├── database/
 │   ├── create_dbs.py

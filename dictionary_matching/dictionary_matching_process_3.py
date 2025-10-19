@@ -47,6 +47,7 @@ def dictionary_matching_process_3(conn, experiment_name, dataloader, label_2_id,
             for i in range( batch_size ):
                 curr_sentence_id = batch['sentence_id'][i]
                 curr_sentence = batch['sentence'][i]
+                curr_domain_id = batch['domain_id'][i]
                 curr_span_token = batch['span_token'][i]
                 curr_dataset_idx = batch['idx'][i].item()
                 curr_gt_label_id = batch['label'][i].item()
@@ -59,8 +60,8 @@ def dictionary_matching_process_3(conn, experiment_name, dataloader, label_2_id,
                     experiment_name,
                     curr_sentence_id,
                     curr_sentence,
+                    curr_domain_id,
                     curr_span_token,
-                    curr_dataset_idx,
                     id_2_label[curr_gt_label_id],
                     id_2_label[curr_pred_label_id],
                     curr_file_name,

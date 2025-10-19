@@ -63,6 +63,7 @@ class PipelineDataset(Dataset):
         for id, sample_data in tqdm(self.samples.items(), desc="Create Trainset instances"):
             sentence = sample_data['sentence']
             sentence_id = sample_data['id']
+            domain_id = str(int(sentence_id.split('_')[1]))
             sentence_seq = sample_data['sequence']
             filename = sample_data['filename']
 
@@ -144,6 +145,7 @@ class PipelineDataset(Dataset):
                 self.instances.append({
                         "sentence": sentence,
                         "sentence_id": sentence_id,
+                        "domain_id": domain_id,
                         "sentence_seq": sentence_seq,
                         "input_ids": input_ids,
                         "decoded_input_ids": decoded_input_ids,
@@ -224,6 +226,7 @@ class PipelineDataset(Dataset):
                     self.instances.append({
                         "sentence": sentence,
                         "sentence_id": sentence_id,
+                        "domain_id": domain_id,
                         "sentence_seq": sentence_seq,
                         "input_ids": input_ids,
                         "decoded_input_ids": decoded_input_ids,
@@ -313,6 +316,7 @@ class PipelineDataset(Dataset):
             "idx": torch.tensor(idx),
             "sentence": item['sentence'],
             "sentence_id": item['sentence_id'],
+            "domain_id": item['domain_id'],
             "sentence_seq": item['sentence_seq'],
             "input_ids": torch.tensor(item["input_ids"]),
             "decoded_input_ids": item["decoded_input_ids"],
@@ -329,13 +333,15 @@ class PipelineDataset(Dataset):
         return len(self.instances)
 
 
-def load_all_json(json_dir="data/train_set_1"):
+def load_all_json(json_dir="data/"):
+    file_counts = 0
     all_data = {"data": [], 'annotations': []}
     for file_name in os.listdir(json_dir):
+        file_counts += 1
         if file_name.endswith(".json"):
             with open(os.path.join(json_dir, file_name), "r", encoding='utf-8') as f:
                 json_file = json.load(f)
                 all_data["data"].append( json_file["data"] )
                 all_data["annotations"].append( json_file['annotations'] )
                     
-    return all_data
+    return all_data, file_counts

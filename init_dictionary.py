@@ -17,8 +17,8 @@ with open(config_file_path, 'r', encoding='utf-8') as f:
 
 conn = get_connection(config)
 
-answer_sheet = config['data']['answer_sheet_dir']
-raw_data = config['data']['raw_data_based_dictionary_init_data_dir']
+answer_sheet = config['dictionary_init']['answer_sheet_dir']
+raw_data = config['dictionary_init']['raw_data_based_dictionary_init_data_dir']
 
 if answer_sheet is not None:
     for domain_id, answer_sheet_path in answer_sheet.items():

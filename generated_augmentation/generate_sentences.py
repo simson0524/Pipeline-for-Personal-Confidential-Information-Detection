@@ -34,7 +34,7 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
 
         이는 "{span_token}"라는 단어가 "{gt_label}"와 "{pred_label}"로 모두 사용될 수 있다고 추론할 수 있을 것 같아.
 
-        "{span_token}"라는 단어가 문맥상 "{pred_label}"로 사용될 수 있는 예시 문장 {n}개와, "{span_token}"라는 단어가 문맥상 {gt_label}로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
+        "{span_token}"라는 단어가 문맥상 "{pred_label}"로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
         각 문장은 char단위로 150개 이상 250개 이하로 별도의 추론설명 없이 한글 맞춤법에 유의하여 주고, 반드시 아래 포맷에 정확히 맞춰 구성해주면 좋겠어. 
         
         ===== 문장들의 시작 =====
@@ -44,15 +44,6 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
         [문장 2를 여기에 생성해줘...]
         ...
         === {pred_label} 문장 ===
-        [문장 {n}을 여기에 생성해줘...]
-        ===== 문장들의 끝 =====
-        ===== 문장들의 시작 =====
-        === {gt_label} 문장 ===
-        [문장 1을 여기에 생성해줘...]
-        === {gt_label} 문장 ===
-        [문장 2를 여기에 생성해줘...]
-        ...
-        === {gt_label} 문장 ===
         [문장 {n}을 여기에 생성해줘...]
         ===== 문장들의 끝 ====="""
     else:
@@ -80,7 +71,7 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
 
         이는 "{span_token}"라는 단어가 "{gt_label}"와 "{pred_label}"로 모두 사용될 수 있다고 추론할 수 있을 것 같아.
 
-        "{span_token}"라는 단어가 문맥상 "{pred_label}"로 사용될 수 있는 예시 문장 {n}개와, "{span_token}"라는 단어가 문맥상 {gt_label}로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
+        "{span_token}"라는 단어가 문맥상 "{pred_label}"로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
         각 문장은 char단위로 150개 이상 250개 이하로 별도의 추론설명 없이 한글 맞춤법에 유의하여 주고, 반드시 아래 포맷에 정확히 맞춰 구성해주면 좋겠어. 
         
         ===== 문장들의 시작 =====
@@ -90,15 +81,6 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
         [문장 2를 여기에 생성해줘...]
         ...
         === {pred_label} 문장 ===
-        [문장 {n}을 여기에 생성해줘...]
-        ===== 문장들의 끝 =====
-        ===== 문장들의 시작 =====
-        === {gt_label} 문장 ===
-        [문장 1을 여기에 생성해줘...]
-        === {gt_label} 문장 ===
-        [문장 2를 여기에 생성해줘...]
-        ...
-        === {gt_label} 문장 ===
         [문장 {n}을 여기에 생성해줘...]
         ===== 문장들의 끝 ====="""
 
@@ -131,27 +113,18 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
         # 추출된 문장들의 앞뒤 공백 및 줄바꿈을 제거합니다.
         pred_samples = [s.strip() for s in pred_matches]
 
-        # 2. gt_label 문장들 추출
-        gt_pattern = f"=== {gt_label} 문장 ===\s*\[?(.*?)\]?(?=\s*===|\s*=====)"
-        gt_matches = re.findall(gt_pattern, output, re.DOTALL)
-        gt_samples = [s.strip() for s in gt_matches]
-
     except Exception as e:
         print(f"[### Exception occured ###]\n{e}")
         pred_samples = []
-        gt_samples = []
 
 
     # 로그용
     print(f"\n\n[{pred_label} 문장]\n")
     for i, sent in enumerate(pred_samples):
         print(f"{i}번문장 -> {sent}")
-    print(f"\n\n[{gt_label} 문장]\n")
-    for i, sent in enumerate(gt_samples):
-        print(f"{i}번문장 -> {sent}")
 
     end_time = datetime.now()
 
     duration = end_time - start_time
 
-    return gt_samples, pred_samples
+    return pred_samples
