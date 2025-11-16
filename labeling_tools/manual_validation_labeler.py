@@ -96,7 +96,7 @@ class ManualValidationLabeler:
         """
 
         self.project = self.ls.projects.create(
-            title=f"Dictionary_Candidate_Labeling_{info_type}",
+            title=f"Manual_Validation_Labeling_{info_type}",
             label_config=label_config
         )
         print(f"✅ 프로젝트 생성 완료: {self.project.id} ({info_type})")

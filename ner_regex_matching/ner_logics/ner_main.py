@@ -12,3 +12,16 @@ def run_ner_detection(sentence):
     ner_dictionary = extract_entities(ner_results)  #결합된 BI 목록중 (이름 나이 날짜만 남기기)
 
     return ner_dictionary
+
+if __name__ == "__main__":
+    test_sentences = [
+        "저는 김지윤입니다.",
+        "임순희가 오늘 회의에 참석했습니다.",
+        "박철수와 최수정이 함께 프로젝트를 진행합니다."
+    ]
+
+    for sent in test_sentences:
+        print(f"\n문장: {sent}")
+        ner_dict = run_ner_detection(sent)
+        print("추출된 엔티티:")
+        print(ner_dict)

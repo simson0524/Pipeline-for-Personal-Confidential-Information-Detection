@@ -609,3 +609,4 @@ def run_ner(sentence: str) -> List[Dict[str, Any]]:
 
     # 결과 리스트로 반환
     return merged
+

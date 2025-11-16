@@ -48,6 +48,7 @@ def ner_regex_matching_process_4(conn, experiment_name, dataloader, label_2_id, 
                     curr_sentence,
                     curr_domain_id,
                     curr_span_token,
+                    curr_dataset_idx,
                     id_2_label[curr_gt_label_id],
                     id_2_label[curr_pred_label_id],
                     curr_file_name,
@@ -92,8 +93,11 @@ def ner_regex_matching_process_4(conn, experiment_name, dataloader, label_2_id, 
                     continue             
     
     # DB(ner_regex_matching_sent_dataset_log)에 정보 추가하기
+    print('[정탐 로그]')
     insert_many_rows(conn, "ner_regex_matching_sent_dataset_log", hit)
+    print('[오탐 로그]')
     insert_many_rows(conn, "ner_regex_matching_sent_dataset_log", wrong)
+    print('[미탐 로그]')
     insert_many_rows(conn, "ner_regex_matching_sent_dataset_log", mismatch)
     
     # 4. NER/REGEX매칭검증 종료시간

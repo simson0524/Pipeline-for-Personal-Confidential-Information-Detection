@@ -29,13 +29,15 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
         -일반정보 : 개인정보와 준식별정보가 아닌 모든 정보
 
 
-        우리는 "{span_token}"라는 단어가 "{gt_label}"라고 생각해서 이렇게 라벨링을 해서 데이터셋으로 사용했거든,
-        그런데 우리 모델이 "{span_token}"라는 단어를 "{pred_label}"로 예측을 했어.
+        우리는 {span_token}(이)가 {gt_label}라고 생각해서 이렇게 라벨링을 해서 데이터셋으로 사용했거든,
+        그런데 우리 모델이 {span_token}(이)라는 단어를 "{pred_label}로 예측을 했어.
 
-        이는 "{span_token}"라는 단어가 "{gt_label}"와 "{pred_label}"로 모두 사용될 수 있다고 추론할 수 있을 것 같아.
+        이는 {span_token}가 {gt_label}와 {pred_label}로 모두 사용될 수 있다고 추론할 수 있을 것 같아.
 
-        "{span_token}"라는 단어가 문맥상 "{pred_label}"로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
-        각 문장은 char단위로 150개 이상 250개 이하로 별도의 추론설명 없이 한글 맞춤법에 유의하여 주고, 반드시 아래 포맷에 정확히 맞춰 구성해주면 좋겠어. 
+        {span_token}가 문맥상 {pred_label}로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
+        각 문장은 char단위로 150개 이상 250개 이하로 별도의 추론설명 없이 한글 맞춤법에 유의하여 주고, 반드시 아래 포맷에 정확히 맞춰 구성해주면 좋겠어.
+
+        특수문자는 ,와 .을 제외하고는 사용하지 마. 
         
         ===== 문장들의 시작 =====
         === {pred_label} 문장 ===
@@ -66,13 +68,15 @@ def generate_n_sentences(n, span_token, gt_label, pred_label, is_pii=True, model
         -일반정보 : 기밀정보가 아닌 모든 정보
 
 
-        우리는 "{span_token}"라는 단어가 "{gt_label}"라고 생각해서 이렇게 라벨링을 해서 데이터셋으로 사용했거든,
-        그런데 우리 모델이 "{span_token}"라는 단어를 "{pred_label}"로 예측을 했어.
+        우리는 {span_token}(이)가 {gt_label}라고 생각해서 이렇게 라벨링을 해서 데이터셋으로 사용했거든,
+        그런데 우리 모델이 {span_token}(이)라는 단어를 "{pred_label}로 예측을 했어.
 
-        이는 "{span_token}"라는 단어가 "{gt_label}"와 "{pred_label}"로 모두 사용될 수 있다고 추론할 수 있을 것 같아.
+        이는 {span_token}가 {gt_label}와 {pred_label}로 모두 사용될 수 있다고 추론할 수 있을 것 같아.
 
-        "{span_token}"라는 단어가 문맥상 "{pred_label}"로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
-        각 문장은 char단위로 150개 이상 250개 이하로 별도의 추론설명 없이 한글 맞춤법에 유의하여 주고, 반드시 아래 포맷에 정확히 맞춰 구성해주면 좋겠어. 
+        {span_token}가 문맥상 {pred_label}로 사용될 수 있는 예시 문장 {n}개를 생성해줬으면 좋겠어.
+        각 문장은 char단위로 150개 이상 250개 이하로 별도의 추론설명 없이 한글 맞춤법에 유의하여 주고, 반드시 아래 포맷에 정확히 맞춰 구성해주면 좋겠어.
+
+        특수문자는 ,와 .을 제외하고는 사용하지 마.  
         
         ===== 문장들의 시작 =====
         === {pred_label} 문장 ===

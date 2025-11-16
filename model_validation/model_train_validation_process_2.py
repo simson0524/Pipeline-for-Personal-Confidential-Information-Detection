@@ -51,6 +51,7 @@ def model_train_validation_process_2(conn, experiment_name, model, epoch, datalo
                     batch['domain_id'][i],
                     epoch,
                     batch['span_token'][i],
+                    'NO_IDX',
                     id_2_label[labels[i].item()],
                     id_2_label[pred_labels[i].item()],
                     batch['file_name'][i],

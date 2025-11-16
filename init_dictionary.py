@@ -3,7 +3,7 @@
 from ner_regex_matching.regex_logics.regex_main import run_regex_detection
 from ner_regex_matching.ner_logics.ner_main import run_ner_detection
 from database.db_logics import insert_many_rows
-from database.create_dbs import get_connection
+from database.create_dbs import get_connection, create_nessesary_tables
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -17,6 +17,9 @@ with open(config_file_path, 'r', encoding='utf-8') as f:
 
 conn = get_connection(config)
 
+# Create DB tables
+create_nessesary_tables(conn)
+
 answer_sheet = config['dictionary_init']['answer_sheet_dir']
 raw_data = config['dictionary_init']['raw_data_based_dictionary_init_data_dir']
 
@@ -28,10 +31,10 @@ if answer_sheet is not None:
         answer_sheet_df = pd.read_csv( answer_sheet_path )
         
         if config['exp']['is_pii']:
-            filtered_info_df = answer_sheet_df[answer_sheet_df['개인정보/준식별자'] == '개인정보']
+            filtered_info_df = answer_sheet_df[answer_sheet_df['개인정보/준식별자/기밀정보'] == '개인정보'] # 개인정보/준식별자 or 개인정보/준식별자/기밀정보
             table_name = 'personal_info_dictionary'
         else:
-            filtered_info_df = answer_sheet_df[answer_sheet_df['기밀정보'] == '기밀정보']
+            filtered_info_df = answer_sheet_df[answer_sheet_df['개인정보/준식별자/기밀정보'] == '기밀정보'] # 기밀정보 or 개인정보/준식별자/기밀정보
             table_name = 'confidential_info_dictionary'
 
         for index, row in tqdm(filtered_info_df.iterrows(), desc=f"{domain_id}도메인 사전 추가중"):
@@ -45,7 +48,7 @@ if answer_sheet is not None:
                 info_dict_scheme = (
                     domain_id,
                     span_token,
-                    "None Z-score",
+                    0,
                     first_inserted_experiment_name,
                     insertion_counts,
                     deletion_counts
@@ -85,7 +88,7 @@ if raw_data is not None:
                     info_dict_scheme = (
                         domain_id,
                         span_token,
-                        "None Z-score",
+                        0,
                         first_inserted_experiment_name,
                         insertion_counts,
                         deletion_counts

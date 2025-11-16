@@ -86,7 +86,10 @@ class PipelineDataset(Dataset):
 
             # 1. annotations에 있는 친구들 기준으로 우선 추출
             span_tokens = []
-            for annotations_dict in self.annotations[id]:
+            if sentence_id not in self.annotations:
+                print(sample_data)
+                continue
+            for annotations_dict in self.annotations[sentence_id]:
                 span_tokens.append( (annotations_dict['span_text'], annotations_dict['label']) ) # 아직 원본 테이터는 span_token으로 변경 안됨
             
 
@@ -273,7 +276,7 @@ class PipelineDataset(Dataset):
                 skipped += 1
                 continue
             
-            # 만약 현재 instance의 "일반정보" 인스턴스의 토큰길이가 1인 경우, 굳이 데이터셋 포함하지 않고 제외하여 label imbalace 최소화
+            # 만약 현재 instance의 "일반정보" 인스턴스의 토큰길이가 1인 경우, 굳이 데이터셋 포함하지 않고 제외
             if (instances[i]['label'] == 0) and (instances[i]['token_end'] - instances[i]['token_start'] <= 1):
                 skipped += 1
                 continue

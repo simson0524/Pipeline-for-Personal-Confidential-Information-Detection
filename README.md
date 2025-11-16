@@ -72,7 +72,7 @@ root/
 │   │
 │   ├── experiment_log/
 │   │   │   ...
-│   │   └── {experiment_name}_run_log.txt
+│   │   └── {experiment_name}_log.txt
 │   │
 │   └── process_log/
 │       │   ...

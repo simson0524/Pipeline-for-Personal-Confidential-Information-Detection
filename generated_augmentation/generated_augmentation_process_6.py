@@ -2,7 +2,6 @@
 
 from generated_augmentation.generate_sentences import generate_n_sentences
 from generated_augmentation.auto_validation import auto_validation
-from generated_augmentation.manual_validation import manual_validation
 from generated_augmentation.add_validated_sentence_to_train_set import add_validated_sentence_to_train_set
 from labeling_tools.manual_validation_labeler import manual_validation_labeler
 from database.db_logics import *
@@ -37,8 +36,10 @@ def generated_augmentation_process_6(conn, experiment_name, config):
 
     generation_start_time = datetime.now()
 
+    sample_id_sequence = 0
+
     # 문장생성 및 자동검증
-    for idx, (_, _, _, span_token, _, gt, pred, _, _) in enumerate(tqdm(generation_candidates, desc="문맥 문장 데이터 생성중...")):
+    for idx, (_, _, _, _, span_token, _, gt, pred, _, _) in enumerate(tqdm(generation_candidates, desc="문맥 문장 데이터 생성중...")):
         # 빠른 실험을 위한...
         if idx % 5 != 0:
             continue
@@ -66,7 +67,7 @@ def generated_augmentation_process_6(conn, experiment_name, config):
 
         # 자동검증결과에 따라 검증된 친구는 자동으로 합치기, 안 된 친구는 수동 검증으로
         for i, (valid_result, sample) in enumerate(zip(valid_results, samples)):
-            dataset_id = f"sample_00_{(experiment_name)}_{str(i).zfill(6)}"
+            dataset_id = f"sample_00_{(experiment_name)}_{str(sample_id_sequence).zfill(6)}"
             if valid_result[0]:
                 char_start = sample.find(span_token, 0)
                 char_end = char_start + len(span_token)
@@ -99,32 +100,34 @@ def generated_augmentation_process_6(conn, experiment_name, config):
             )
             generation_augmented_sent_dataset_log.append( generation_augmented_sent_dataset_log_scheme )
 
-    generation_duration = datetime.now() - 
+            sample_id_sequence += 1
+
+    generation_duration = datetime.now() - generation_start_time
     
-    manual_validation_start_time = datetime.now()
+    # manual_validation_start_time = datetime.now()
 
-    # 수동검증
-    manual_chk_completed_list = manual_validation_labeler(
-        config=config, 
-        manual_chk_list=manual_chk_list
-        )
+    # # 수동검증
+    # manual_chk_completed_list = manual_validation_labeler(
+    #     config=config, 
+    #     manual_chk_list=manual_chk_list
+    #     )
 
-    target_label = "개인정보" if config['exp']['is_pii'] else "기밀정보"
+    # target_label = "개인정보" if config['exp']['is_pii'] else "기밀정보"
 
-    for manual_chk_dict in manual_chk_completed_list:
-        generation_augmented_sent_dataset_log_scheme = (
-            manual_chk_dict['dataset_id'],
-            experiment_name,
-            manual_chk_dict['generated_sentence'],
-            "00", # 증강된 문장은 도메인이 별도로 없으므로 "00"으로 통일
-            manual_chk_dict['span_token'],
-            target_label,
-            manual_chk_dict['validated_label']
-        )
-        generation_augmented_sent_dataset_log.append( generation_augmented_sent_dataset_log_scheme )
+    # for manual_chk_dict in manual_chk_completed_list:
+    #     generation_augmented_sent_dataset_log_scheme = (
+    #         manual_chk_dict['dataset_id'],
+    #         experiment_name,
+    #         manual_chk_dict['generated_sentence'],
+    #         "00", # 증강된 문장은 도메인이 별도로 없으므로 "00"으로 통일
+    #         manual_chk_dict['span_token'],
+    #         target_label,
+    #         manual_chk_dict['validated_label']
+    #     )
+    #     generation_augmented_sent_dataset_log.append( generation_augmented_sent_dataset_log_scheme )
 
-    manual_validation_duration = datetime.now() - manual_validation_start_time
+    # manual_validation_duration = datetime.now() - manual_validation_start_time
 
     insert_many_rows(conn=conn, table_name='generation_augmented_sent_dataset_log', data_list=generation_augmented_sent_dataset_log)
 
-    return generation_duration, manual_validation_duration
+    return generation_duration, None # manual_validation_duration

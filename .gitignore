@@ -1,3 +1,5 @@
 *.pyc
 data/
 checkpoints/
+visualizations/
+score_binned_csvs_*/

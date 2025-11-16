@@ -2,12 +2,12 @@
 
 from database.create_dbs import get_connection, create_nessesary_tables
 from database.db_logics import delete_all_rows
-from data.answer_sheet.answer_sheet_to_dictionary import answer_sheet_to_dictionary
 from dataset.pipeline_dataset import PipelineDataset, load_all_json
 from classifier.model import Classifier
 from model_train.model_train_process_1 import model_train_process_1
 from model_validation.model_train_validation_process_2 import model_train_validation_process_2
 from dictionary_matching.dictionary_matching_process_3 import dictionary_matching_process_3
+from dictionary_matching.dictionary_size_calculator import dictionary_size_calculator
 from ner_regex_matching.ner_regex_matching_process_4 import ner_regex_matching_process_4
 from model_validation.model_validation_process_5 import model_validation_process_5
 from generated_augmentation.generated_augmentation_process_6 import generated_augmentation_process_6
@@ -18,6 +18,7 @@ from transformers import AutoModel, AutoTokenizer, AutoConfig
 from torch.utils.data import Subset, DataLoader
 from sklearn.model_selection import StratifiedKFold
 from datetime import datetime
+from tqdm import tqdm
 import numpy as np
 import torch
 import yaml
@@ -35,14 +36,6 @@ PIPELINE_LOOP_L = 0
 
 # DB connection
 conn = get_connection(config)
-
-# Create DB tables
-create_nessesary_tables(conn)
-
-# 정답지 사전에 추가하기
-answer_sheet_dir = config['data']['answer_sheet_dir']
-if answer_sheet_dir is not None:
-    answer_sheet_to_dictionary(conn, answer_sheet_dir, config['exp']['is_pii'], True)
 
 # 이전 실험명(변화율 관련 지표 계산 시 사용)
 previous_experiment_name = "None"
@@ -69,9 +62,18 @@ while True:
     if is_pii:
         label_2_id = config['label_mapping']['pii_label_2_id']
         id_2_label = config['label_mapping']['pii_id_2_label']
+        dict_table_name = 'personal_info_dictionary'
     else:
         label_2_id = config['label_mapping']['confid_label_2_id']
         id_2_label = config['label_mapping']['confid_id_2_label']
+        dict_table_name = 'confidential_info_dictionary'
+
+    # 파이프라인 전 사전 크기
+    dictionaries, each_dict_size_before_pipeline = dictionary_size_calculator(
+        conn=conn,
+        config=config,
+        dict_table_name=dict_table_name
+    )
 
     # 실험시작시각(KST)
     experiment_start_time = datetime.now()
@@ -218,7 +220,7 @@ while True:
                 model_path = os.path.join(save_dir, f"epoch{epoch}_model.pt")
                 torch.save(classifier.state_dict(), model_path)
 
-            # 현재 fold+epoch의 model_train_performance 저장
+            # 현재 epoch의 model_train_performance 저장
             model_train_performance_log_scheme = (
                 experiment_name,
                 epoch,
@@ -234,7 +236,7 @@ while True:
             )
             model_train_performance_log.append( model_train_performance_log_scheme )
 
-        # 이번 fold의 최고성능 epoch 저장
+        # 최고성능 epoch 저장
         best_performed_epoch_per_fold[f'fold{fold}'] = f'epoch{best_epoch}'
     
     # 학습데이터 model_train_performance에 전부 삽입
@@ -258,6 +260,7 @@ while True:
         dataloader=all_dataloader_3,
         label_2_id=label_2_id,
         id_2_label=id_2_label,
+        config=config,
         is_pii=is_pii
     )
 
@@ -286,28 +289,17 @@ while True:
         mismatch_delta_rate_3        = None
 
     # 정탐인 것 이후 프로세스에서 보지 않도록 is_valided True로 만들기
-    for _, _, _, _, idx, _, _, _, _ in dictionary_matching_result['hit']:
+    for _, _, _, _, _, idx, _, _, _, _ in dictionary_matching_result['hit']:
         all_valid_dataset.edit_is_validated(
             idx=idx,
             edit_to=True
         )
-
-    # 4. NER/REGEX 매칭검증 5. 모델검증에서도 정탐 후보인것을 올릴때 table_dict에 먼저 기록하고 한번에 DB에 올릴것
-    if is_pii:
-        dict_table_name = 'personal_info_dictionary'
-    else:
-        dict_table_name = 'confidential_info_dictionary'
-    table_dict = fetch_table_as_dict(
-            conn=conn,
-            table_name=dict_table_name,
-            key_column='span_token'
-        )
     
     # 오탐사항 사전제외하기 (단순히 *_info_dictionary 테이블의 deletion_counts=+1 로 갈음함)
     for wrong_log in dictionary_matching_result['wrong']:
-        if wrong_log[3] in table_dict:
-            if table_dict[wrong_log[3]]['insertion_counts'] > table_dict[wrong_log[3]]['deletion_counts']:
-                table_dict[wrong_log[3]]['deletion_counts'] = table_dict[wrong_log[3]]['insertion_counts']
+        if wrong_log[4] in dictionaries[wrong_log[3]]:
+            if dictionaries[wrong_log[3]][wrong_log[4]]['insertion_counts'] > dictionaries[wrong_log[3]][wrong_log[4]]['deletion_counts']:
+                dictionaries[wrong_log[3]][wrong_log[4]]['deletion_counts'] = dictionaries[wrong_log[3]][wrong_log[4]]['insertion_counts']
         
     dictionary_matching_end_time = datetime.now()
     dictionary_matching_duration = dictionary_matching_end_time - dictionary_matching_start_time
@@ -359,7 +351,7 @@ while True:
         mismatch_delta_rate_4        = None
 
     # 정탐인 것 이후 프로세스에서 보지 않도록 is_valided=True로 만들기
-    for _, _, _, _, idx, _, _, _, _ in ner_regex_matching_result['hit']:
+    for _, _, _, _, _, idx, _, _, _, _ in ner_regex_matching_result['hit']:
         all_valid_dataset.edit_is_validated(
             idx=idx,
             edit_to=True
@@ -409,7 +401,7 @@ while True:
         else:
             classifier = Classifier(pretrained_bert=model, num_labels=2).to(device)
 
-        model_path = f"checkpoints/experiment_{experiment_name}/epoch{best_performed_epoch_per_fold[f'fold{fold}']}_model.pt"
+        model_path = f"checkpoints/experiment_{experiment_name}/{best_performed_epoch_per_fold[f'fold{fold}']}_model.pt"
 
         state_dict = torch.load(model_path)
 
@@ -426,6 +418,8 @@ while True:
         )
 
         print(f"[Valid] Loss: {model_validation_result['avg_loss']:.4f} | Precision: {model_validation_result['precision']:.4f} | Recall: {model_validation_result['recall']:.4f} | F1: {model_validation_result['f1']:.4f} | Metric: {model_validation_result['metric']}")
+
+        k_fold = 1
 
         final_model_validation_result_dict['avg_loss'] += model_validation_result['avg_loss'] / k_fold
         final_model_validation_result_dict['precision'] += model_validation_result['precision'] / k_fold
@@ -478,28 +472,41 @@ while True:
     condition_satisfied_span_token_set = set()
 
     # 조건에 만족하는 후보는 사전에 등재
-    for candidate in all_candidates:
-        span_token = candidate[3]
+    for candidate in tqdm(all_candidates, desc=f'조건 만족하는 후보 사전 등재 세팅 중'):
+        span_token = candidate[4]
         if span_token in condition_satisfied_span_token_set:
-            if span_token in table_dict:
-                table_dict[span_token]['insertion_counts'] += 1
+            if span_token in dictionaries[candidate[3]]:
+                dictionaries[candidate[3]][span_token]['insertion_counts'] += 1
             else:
-                table_dict[span_token] = {
+                dictionaries[candidate[3]][span_token] = {
                     'span_token': span_token,
                     'first_insertion_loop': PIPELINE_LOOP_L,
                     'insertion_counts': 1,
                     'deletion_counts': 0
                 }
 
-    # 프로세스 이후 사전 크기
-    after_process_dictionary_size = 0
-    for value in table_dict.values():
-        if value['insertion_counts'] > value['deletion_counts']:
-            after_process_dictionary_size += 1
-        else:
-            print(value,'\n')
+    delete_all_rows(conn, dict_table_name, confirm=True)
 
-    
+    dictionary_data_list = []
+
+    for domain_id, dictionary in dictionaries.items():
+        for span_token, row in tqdm(dictionary.items(), desc=f"[Domain {domain_id}] dictionary_setting"):
+            dictionary_data_list.append( (row['domain_id'], row['span_token'], row['z_score'], row['first_inserted_experiment_name'], row['insertion_counts'], row['deletion_counts']) )
+
+    print(dictionary_data_list,"\n")
+
+    insert_many_rows(conn, dict_table_name, dictionary_data_list)
+
+    # 프로세스 이후 사전 크기
+    _, each_dict_size_after_pipeline = dictionary_size_calculator(
+        conn=conn, 
+        config=config, 
+        dict_table_name=dict_table_name
+        )
+
+    each_dict_size_delta_rate = {}
+    for domain_id, size in each_dict_size_after_pipeline.items():
+        each_dict_size_delta_rate[domain_id] = size / each_dict_size_before_pipeline[domain_id]
 
     ### ------------------------------------------------------------
     ### *_performance 테이블 업데이트
@@ -515,8 +522,8 @@ while True:
         wrong_delta_rate_3,
         len(dictionary_matching_result['mismatch']),
         mismatch_delta_rate_3,
-        dictionary_matching_result['fetched_dictionary_size'],
-        after_process_dictionary_size / dictionary_matching_result['fetched_dictionary_size'],
+        json.dumps(each_dict_size_after_pipeline),
+        json.dumps(each_dict_size_delta_rate),
         json.dumps(dictionary_matching_result['metric'])
     )]
     insert_many_rows(conn=conn, table_name='dictionary_matching_performance', data_list=dictionary_matching_performance_log)
@@ -561,18 +568,22 @@ while True:
     want_to_continue = metric_viewer(config=config, experiment_name=experiment_name, API_KEY=config['api_key']['label_studio'], is_pii=is_pii)
     if not want_to_continue:
         print("[파이프라인 종료] train_set_{D+1}로 다음 파이프라인을 진행하세요.")
-        break
+        
 
 
 
     ### ------------------------------------------------------------
     ### 6. 문서 증강 + [HUMAN 개입] 수동 검증
     ### ------------------------------------------------------------
-    generation_duration, manual_validation_duration = generated_augmentation_process_6(
-        conn=conn, 
-        experiment_name=experiment_name, 
-        config=config
-        )
+    if want_to_continue:
+        generation_duration, manual_validation_duration = generated_augmentation_process_6(
+            conn=conn, 
+            experiment_name=experiment_name, 
+            config=config
+            )
+    else:
+        generation_duration, manual_validation_duration = 'None', 'None'
+        break
 
 
 

@@ -19,23 +19,51 @@ def extract_entities(
     interest_types = personal_types | confidential_types | identifier_types | quasi_identifier_types
 
     results = []
-    for item in ner_results:
-        for ent in item.get("entities") or []:
-            etype = ent.get("entity_type", "")
-            if etype not in interest_types:
-                continue
+    # for item in ner_results:
+    #     for ent in item.get("entities") or []:
+    #         etype = ent.get("entity_type", "")
+    #         if etype not in interest_types:
+    #             continue
 
-            pc = "개인" if etype in personal_types else "기밀"
-            # description 필드를 label로 매핑
-            label = ent.get("description", "")
+    #         pc = "개인" if etype in personal_types else "기밀"
+    #         # description 필드를 label로 매핑
+    #         label = ent.get("description", "")
 
-            results_item = {
-                "단어": ent.get("token", ""),
-                "부서명": None,      # 기본 None
-                "문서명": None,      # 기본 None
-                "단어유형": label,
-                "구분": pc,
-            }
-            results.append(results_item)
+    #         results_item = {
+    #             "단어": ent.get("token", ""),
+    #             "부서명": None,      # 기본 None
+    #             "문서명": None,      # 기본 None
+    #             "단어유형": label,
+    #             "구분": pc,
+    #         }
+    #         results.append(results_item)
+
+    # return results
+
+    # ner_results가 단순 entity 리스트일 경우 바로 사용
+    if ner_results and "token" in ner_results[0]:
+        entities = ner_results
+    else:
+        # 기존 방식: item 안에 entities 키가 있는 경우
+        entities = []
+        for item in ner_results:
+            entities.extend(item.get("entities") or [])
+
+    for ent in entities:
+        etype = ent.get("entity_type", "")
+        if etype not in interest_types:
+            continue
+
+        pc = "개인" if etype in personal_types else "기밀"
+        label = ent.get("description", "")
+
+        results_item = {
+            "단어": ent.get("token", ""),
+            "부서명": None,
+            "문서명": None,
+            "단어유형": label,
+            "구분": pc,
+        }
+        results.append(results_item)
 
     return results

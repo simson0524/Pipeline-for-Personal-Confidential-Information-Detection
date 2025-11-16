@@ -70,27 +70,30 @@ def select_specific_row(conn, table_name, select_column_name, select_value, expe
     return column_names, result
 
 
-def fetch_table_as_dict(conn, table_name, key_column):
+def fetch_dictionary_table_as_dict(conn, table_name, key_column, domain_id):
     nested_dict = {}
     with conn.cursor() as cur:
         try:
-            # 1. 테이블 전체 데이터를 조회하는 쿼리 실행
-            # psycopg2.sql을 사용하여 테이블 이름을 안전하게 처리
-            query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name))
-            cur.execute(query)
+            # 1. [수정] WHERE 절을 추가하여 domain_id로 필터링하는 쿼리 작성
+            # 컬럼 이름도 SQL 인젝션 방지를 위해 Identifier로 처리합니다.
+            query = sql.SQL("SELECT * FROM {} WHERE {} = %s").format(
+                sql.Identifier(table_name),
+                sql.Identifier('domain_id')  # 'domain_id' 컬럼을 안전하게 식별
+            )
 
-            # 2. 쿼리 결과로부터 컬럼 이름 목록 가져오기
+            # 2. [수정] execute 메서드에 쿼리와 함께 파라미터를 튜플 형태로 전달
+            cur.execute(query, (domain_id,))
+
+            # 3. 쿼리 결과로부터 컬럼 이름 목록 가져오기
             if not cur.description:
-                print(f"'{table_name}' 테이블에 데이터가 없거나 테이블이 존재하지 않습니다.")
+                # 데이터가 없는 것은 정상일 수 있으므로 print 대신 로깅이나 조용한 반환을 고려할 수 있습니다.
                 return {}
             column_names = [desc[0] for desc in cur.description]
             
-            # 3. 모든 행(row)을 가져와서 딕셔너리 생성
+            # 4. 모든 행(row)을 가져와서 딕셔너리 생성
             for row in cur.fetchall():
-                # zip을 이용해 {컬럼이름: 값} 형태의 딕셔너리로 변환
                 row_dict = dict(zip(column_names, row))
                 
-                # key_column의 값을 최상위 딕셔너리의 Key로 사용
                 dict_key = row_dict.get(key_column)
                 if dict_key is not None:
                     nested_dict[dict_key] = row_dict
@@ -101,6 +104,7 @@ def fetch_table_as_dict(conn, table_name, key_column):
             print(f"'{table_name}' 테이블 조회 중 오류 발생: {error}")
 
     return nested_dict
+
 
 
 def fetch_generation_candidates(conn, experiment_name):
